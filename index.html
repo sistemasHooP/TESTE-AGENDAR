@@ -42,22 +42,6 @@
             <p class="mt-4 text-gray-600">A carregar...</p>
         </div>
 
-        <!-- ================= NOVA TELA DE LICENÇA EXPIRADA (INÍCIO) ================= -->
-        <div id="license-expired-screen" class="hidden">
-            <header class="theme-bg text-white rounded-lg shadow-md mb-6 overflow-hidden text-center">
-                <div class="p-4 relative mt-8">
-                    <img id="expired-logo" src="https://placehold.co/100x100/cccccc/FFFFFF?text=Logo" alt="Logo da App" class="w-24 h-24 mx-auto rounded-full border-4 border-white object-cover mb-2 shadow-lg">
-                    <h1 id="expired-app-name" class="text-2xl font-bold">Sistema de Agendamento</h1>
-                </div>
-            </header>
-            <main class="bg-white rounded-lg shadow-md p-8 text-center">
-                <i class="fas fa-exclamation-triangle fa-3x text-yellow-500 mb-4"></i>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Licença Expirada</h2>
-                <p id="license-expired-message" class="text-gray-700 text-lg leading-relaxed"></p>
-            </main>
-        </div>
-        <!-- ================= NOVA TELA DE LICENÇA EXPIRADA (FIM) =================== -->
-
         <div id="form-screen" class="hidden">
             <header class="theme-bg text-white rounded-lg shadow-md mb-6 overflow-hidden text-center">
                 <div id="cover-photo" class="h-32 bg-cover bg-center" style="background-image: url('https://placehold.co/600x200/cccccc/FFFFFF?text=Capa');">
@@ -270,6 +254,19 @@
         </div>
     </div>
 
+    <!-- ================= NOVO MODAL DE LICENÇA EXPIRADA (INÍCIO) ================= -->
+    <div id="license-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative mx-auto w-full max-w-sm shadow-lg rounded-xl bg-white text-center p-6 space-y-4">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 -mt-16 border-4 border-white">
+                <i class="fas fa-exclamation-triangle fa-2x text-yellow-500"></i>
+            </div>
+            <h3 class="text-xl leading-6 font-bold text-gray-800">Licença Expirada</h3>
+            <div class="text-base text-gray-600">
+                <p id="license-modal-message"></p>
+            </div>
+        </div>
+    </div>
+    <!-- ================= NOVO MODAL DE LICENÇA EXPIRADA (FIM) =================== -->
 
     <footer class="text-center p-4">
         <button id="admin-link" class="text-sm text-gray-500 hover:theme-text font-semibold py-1 px-2 rounded-lg transition-colors">Painel ADM</button>
@@ -291,17 +288,13 @@
         if ('serviceWorker' in navigator) {
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js')
-              .then(registration => {
-                console.log('Service Worker registrado com sucesso:', registration);
-              })
-              .catch(error => {
-                console.log('Falha ao registrar o Service Worker:', error);
-              });
+              .then(registration => console.log('Service Worker registrado com sucesso:', registration))
+              .catch(error => console.log('Falha ao registrar o Service Worker:', error));
           });
         }
 
 
-        // --- NOVA FUNÇÃO PARA CHAMAR A API ---
+        // --- FUNÇÃO PARA CHAMAR A API (VERSÃO MELHORADA) ---
         async function callApi(action, params = {}) {
             try {
                 const response = await fetch(API_URL, {
@@ -312,10 +305,17 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Erro de rede: ${response.statusText}`);
+                    throw new Error(`Erro de rede. Status: ${response.status} ${response.statusText}`);
                 }
                 
-                const data = await response.json();
+                const responseText = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error("A resposta da API não foi um JSON válido:", responseText);
+                    throw new Error("Ocorreu um erro inesperado no servidor. Verifique se a API foi implantada corretamente com acesso 'Qualquer pessoa'.");
+                }
 
                 if (data.error) {
                     throw new Error(data.error);
@@ -330,7 +330,7 @@
             }
         }
         
-        // --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO ---
+        // --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO (ATUALIZADA) ---
         document.addEventListener('DOMContentLoaded', initializeApp);
 
         async function initializeApp() {
@@ -338,20 +338,26 @@
                 const settings = await callApi('getAppSettings');
                 appSettings = settings;
 
-                // --- NOVA VERIFICAÇÃO DE LICENÇA NO FRONTEND ---
+                // Carrega a interface principal do app, mesmo que a licença esteja expirada.
+                applyTheme(appSettings.themeColor || '#0B2447');
+                // A função setupFormUI precisa dos elementos HTML, então a movemos para depois da verificação
+                
+                // --- NOVA VERIFICAÇÃO DE LICENÇA (AGORA MOSTRA O MODAL) ---
                 if (appSettings.isLicenseExpired) {
-                    applyTheme(appSettings.themeColor || '#0B2447');
-                    document.getElementById('expired-app-name').textContent = appSettings.appName || 'Sistema de Agendamento';
-                    document.getElementById('expired-logo').src = appSettings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo';
-                    document.getElementById('license-expired-message').textContent = appSettings.licenseExpiredMsg;
-                    showScreen('license-expired-screen');
+                    // Mostra a tela de formulário como fundo, mas desabilitada
+                    showScreen('form-screen'); 
+                    setupFormUI(appSettings); // Configura o cabeçalho
+                    
+                    const modal = document.getElementById('license-modal');
+                    document.getElementById('license-modal-message').textContent = appSettings.licenseExpiredMsg;
+                    modal.classList.remove('hidden');
+                    
                     const adminLink = document.getElementById('admin-link');
                     if(adminLink) adminLink.style.display = 'none';
-                    return; 
+                    return; // Interrompe a execução normal
                 }
 
                 // Se a licença estiver OK, continua o carregamento normal
-                applyTheme(appSettings.themeColor);
                 setupFormUI(appSettings);
                 setupEndedUI(appSettings);
                 
@@ -363,6 +369,7 @@
 
                 addEventListeners();
                 toggleInfoSupportButton();
+
             } catch (error) {
                 const loadingScreen = document.getElementById('loading-screen');
                 loadingScreen.innerHTML = `<p class="text-red-500 text-center">Não foi possível carregar as configurações do aplicativo.<br>Por favor, tente novamente mais tarde.</p>`;
