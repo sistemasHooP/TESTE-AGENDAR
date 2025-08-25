@@ -31,7 +31,7 @@
         // Esta função busca o HTML da API e substitui a página inteira.
         async function loadAppInterface() {
             try {
-                // Usa POST para chamar a nova ação 'getInterfaceHtml', que é imune a problemas de CORS e cache.
+                // Usa POST para chamar a nova ação 'getInterfaceHtml', que é imune a problemas de CORS.
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
