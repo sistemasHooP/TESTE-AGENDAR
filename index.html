@@ -96,6 +96,20 @@
             </main>
         </div>
 
+        <div id="license-expired-screen" class="hidden">
+            <header class="theme-bg text-white rounded-lg shadow-md mb-6 overflow-hidden text-center">
+                <div id="license-cover-photo" class="h-32 bg-cover bg-center" style="background-image: url('https://placehold.co/600x200/cccccc/FFFFFF?text=Capa');"></div>
+                <div class="p-4 relative">
+                    <img id="license-logo" src="" alt="Logo da App" class="w-24 h-24 mx-auto rounded-full border-4 border-white object-cover -mt-16 mb-2 shadow-lg">
+                    <h1 id="license-app-name" class="text-2xl font-bold"></h1>
+                </div>
+            </header>
+            <main class="bg-white rounded-lg shadow-md p-8 text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-red-500 mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Licença Expirada</h2>
+                <p id="license-expired-message" class="text-gray-700 text-lg leading-relaxed"></p>
+            </main>
+        </div>
         <div id="login-screen" class="hidden">
             <div class="bg-white p-8 rounded-lg shadow-md max-w-sm mx-auto mt-20">
                 <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Acesso Administrativo</h2>
@@ -322,12 +336,21 @@
                 applyTheme(appSettings.themeColor);
                 setupFormUI(appSettings);
                 setupEndedUI(appSettings);
+                // A NOVA FUNÇÃO PRECISA SER CHAMADA AQUI TAMBÉM
+                setupLicenseExpiredUI(appSettings);
                 
-                if (appSettings.isSchedulingEnded) {
+                // ================= LÓGICA DE EXIBIÇÃO DE TELA ATUALIZADA =================
+                if (appSettings.isLicenseExpired) {
+                    // 1. A verificação mais importante: a licença expirou?
+                    showScreen('license-expired-screen'); // Mostra a tela de licença vencida
+                } else if (appSettings.isSchedulingEnded) {
+                    // 2. Se a licença estiver OK, verifica se os agendamentos encerraram
                     showScreen('ended-screen');
                 } else {
+                    // 3. Se tudo estiver OK, mostra o formulário de agendamento
                     showScreen('form-screen');
                 }
+                // ================= FIM DA LÓGICA ATUALIZADA ==============================
 
                 addEventListeners();
                 toggleInfoSupportButton();
@@ -337,10 +360,22 @@
             }
         }
 
-        // --- AQUI COMEÇA TODO O SEU CÓDIGO JAVASCRIPT ORIGINAL, SEM NENHUMA ALTERAÇÃO ---
+        // --- AQUI COMEÇA TODO O SEU CÓDIGO JAVASCRIPT ORIGINAL, COM A ADIÇÃO DA NOVA FUNÇÃO ---
         function applyTheme(color) { document.documentElement.style.setProperty('--theme-color', color); }
         function setupFormUI(settings) { document.getElementById('app-name').textContent = settings.appName || 'Sistema de Marcação'; document.getElementById('app-logo').src = settings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo'; document.getElementById('app-address').textContent = settings.appAddress || ''; document.getElementById('app-phone').textContent = settings.appPhone || ''; if (settings.appCoverUrl) { document.getElementById('cover-photo').style.backgroundImage = `url('${settings.appCoverUrl}')`; } const dateInput = document.getElementById('bookingDate'); const today = new Date(); today.setHours(0, 0, 0, 0); dateInput.min = today.toISOString().split('T')[0]; let finalMaxDate = null; if (settings.dateLimit && !isNaN(Number(settings.dateLimit))) { const maxDateFromLimit = new Date(today); maxDateFromLimit.setDate(today.getDate() + Number(settings.dateLimit)); finalMaxDate = maxDateFromLimit; } if (settings.schedulingEndDate && settings.schedulingEndDate.trim() !== "") { try { const parts = settings.schedulingEndDate.split('/'); if (parts.length === 3) { const endDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])); if (!isNaN(endDate.getTime())) { if (finalMaxDate === null || endDate < finalMaxDate) { finalMaxDate = endDate; } } } } catch (e) { console.error("Data de Encerramento inválida:", settings.schedulingEndDate); } } if (finalMaxDate) { dateInput.max = finalMaxDate.toISOString().split('T')[0]; } }
         function setupEndedUI(settings) { document.getElementById('ended-app-name').textContent = settings.appName || 'Sistema de Marcação'; document.getElementById('ended-logo').src = settings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo'; document.getElementById('ended-message').textContent = settings.schedulingEndedMsg || 'O período de marcações está encerrado.'; if (settings.appCoverUrl) { document.getElementById('ended-cover-photo').style.backgroundImage = `url('${settings.appCoverUrl}')`; } }
+        
+        // ================= NOVA FUNÇÃO PARA A TELA DE LICENÇA (INÍCIO) ===================
+        function setupLicenseExpiredUI(settings) {
+            document.getElementById('license-app-name').textContent = settings.appName || 'Sistema de Marcação';
+            document.getElementById('license-logo').src = settings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo';
+            document.getElementById('license-expired-message').textContent = settings.licenseExpiredMsg || 'Sua licença para usar este aplicativo expirou. Entre em contato com o suporte.';
+            if (settings.appCoverUrl) {
+                document.getElementById('license-cover-photo').style.backgroundImage = `url('${settings.appCoverUrl}')`;
+            }
+        }
+        // ================= NOVA FUNÇÃO PARA A TELA DE LICENÇA (FIM) =====================
+
         function showScreen(screenId) { document.querySelectorAll('#app > div').forEach(screen => screen.classList.add('hidden')); const screenToShow = document.getElementById(screenId); if (screenToShow) screenToShow.classList.remove('hidden'); window.scrollTo(0, 0); }
         function resetAndShowForm() { document.getElementById('booking-form').reset(); selectedTime = null; updateSubmitButtonState(); document.getElementById('time-slots').innerHTML = '<p class="col-span-full text-center text-gray-500 p-4 bg-gray-50 rounded-lg">Selecione uma data.</p>'; showScreen('form-screen'); }
         async function fetchAvailableSlots() { const dateInput = document.getElementById('bookingDate'); const timeSlotsDiv = document.getElementById('time-slots'); const selectedDateStr = dateInput.value; selectedTime = null; updateSubmitButtonState(); showFormError(''); if (!selectedDateStr) { timeSlotsDiv.innerHTML = '<p class="col-span-full text-center text-gray-500 p-4 bg-gray-50 rounded-lg">Selecione uma data.</p>'; return; } const selectedDate = new Date(selectedDateStr + "T00:00:00-03:00"); const minDate = new Date(dateInput.min + "T00:00:00-03:00"); const maxDate = dateInput.max ? new Date(dateInput.max + "T00:00:00-03:00") : null; if (selectedDate < minDate || (maxDate && selectedDate > maxDate)) { showFormError("A data selecionada não é permitida. Por favor, escolha outra."); timeSlotsDiv.innerHTML = '<p class="col-span-full text-center text-red-500 p-4 bg-red-50 rounded-lg">Data inválida.</p>'; return; } timeSlotsDiv.innerHTML = `<div class="col-span-full grid grid-cols-3 sm:grid-cols-4 gap-2 animate-pulse">${Array(8).fill('<div class="h-9 bg-gray-200 rounded-lg"></div>').join('')}</div>`; try { const slots = await callApi('getAvailableSlots', { dateString: selectedDateStr }); updateSlotsUI(slots); } catch (error) { timeSlotsDiv.innerHTML = '<p class="col-span-full text-center text-red-500 p-4 bg-red-50 rounded-lg">Erro ao carregar horários.</p>'; } }
