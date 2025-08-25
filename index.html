@@ -42,6 +42,21 @@
             <p class="mt-4 text-gray-600">A carregar...</p>
         </div>
 
+        <!-- TELA DE LICENÇA EXPIRADA (PÁGINA INTEIRA) -->
+        <div id="license-expired-screen" class="hidden">
+            <header class="theme-bg text-white rounded-lg shadow-md mb-6 overflow-hidden text-center">
+                <div class="p-4 relative mt-8">
+                    <img id="expired-logo" src="https://placehold.co/100x100/cccccc/FFFFFF?text=Logo" alt="Logo da App" class="w-24 h-24 mx-auto rounded-full border-4 border-white object-cover mb-2 shadow-lg">
+                    <h1 id="expired-app-name" class="text-2xl font-bold">Sistema de Agendamento</h1>
+                </div>
+            </header>
+            <main class="bg-white rounded-lg shadow-md p-8 text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-yellow-500 mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Licença Expirada</h2>
+                <p id="license-expired-message" class="text-gray-700 text-lg leading-relaxed"></p>
+            </main>
+        </div>
+
         <div id="form-screen" class="hidden">
             <header class="theme-bg text-white rounded-lg shadow-md mb-6 overflow-hidden text-center">
                 <div id="cover-photo" class="h-32 bg-cover bg-center" style="background-image: url('https://placehold.co/600x200/cccccc/FFFFFF?text=Capa');">
@@ -254,20 +269,6 @@
         </div>
     </div>
 
-    <!-- ================= NOVO MODAL DE LICENÇA EXPIRADA (INÍCIO) ================= -->
-    <div id="license-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative mx-auto w-full max-w-sm shadow-lg rounded-xl bg-white text-center p-6 space-y-4">
-            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 -mt-16 border-4 border-white">
-                <i class="fas fa-exclamation-triangle fa-2x text-yellow-500"></i>
-            </div>
-            <h3 class="text-xl leading-6 font-bold text-gray-800">Licença Expirada</h3>
-            <div class="text-base text-gray-600">
-                <p id="license-modal-message"></p>
-            </div>
-        </div>
-    </div>
-    <!-- ================= NOVO MODAL DE LICENÇA EXPIRADA (FIM) =================== -->
-
     <footer class="text-center p-4">
         <button id="admin-link" class="text-sm text-gray-500 hover:theme-text font-semibold py-1 px-2 rounded-lg transition-colors">Painel ADM</button>
         <p class="text-xs text-gray-500 mt-1">Desenvolvido por Thiego Pereira</p>
@@ -278,7 +279,8 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbx3HNQ1FZ32RTV7Nj915u-G-i5GSA96_aouKe7pCB_cIMwaNd3ncnz0-EARj34poxYORQ/exec";
 
         // --- VARIÁVEIS GLOBAIS ---
-        let appSettings = {}, selectedTime = null, isLoading = false, appointmentsChart = null, modalConfirmCallback = null;
+        let appSettings = {};
+        let selectedTime = null, isLoading = false, appointmentsChart = null, modalConfirmCallback = null;
         let editAppointmentData = { id: null, originalTime: null, selectedTime: null };
         let lastDashboardData = null;
         let lastReportType = 'daily';
@@ -304,9 +306,7 @@
                     redirect: "follow"
                 });
 
-                if (!response.ok) {
-                    throw new Error(`Erro de rede. Status: ${response.status} ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`Erro de rede. Status: ${response.status}`);
                 
                 const responseText = await response.text();
                 let data;
@@ -317,20 +317,16 @@
                     throw new Error("Ocorreu um erro inesperado no servidor. Verifique se a API foi implantada corretamente com acesso 'Qualquer pessoa'.");
                 }
 
-                if (data.error) {
-                    throw new Error(data.error);
-                }
+                if (data.error) throw new Error(data.error);
                 
                 return data;
-
             } catch (error) {
                 console.error(`Erro ao chamar a API para a ação "${action}":`, error);
-                showError(error);
                 throw error;
             }
         }
         
-        // --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO (VERSÃO CORRIGIDA) ---
+        // --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO (VERSÃO FINAL E ROBUSTA) ---
         document.addEventListener('DOMContentLoaded', initializeApp);
 
         async function initializeApp() {
@@ -338,44 +334,44 @@
                 const settings = await callApi('getAppSettings');
                 appSettings = settings;
 
-                // --- LÓGICA DE LICENÇA CORRIGIDA ---
                 if (appSettings.isLicenseExpired) {
                     applyTheme(appSettings.themeColor || '#0B2447');
-                    setupFormUI(appSettings);
-                    showScreen('form-screen'); 
+                    document.getElementById('expired-app-name').textContent = appSettings.appName || 'Sistema de Agendamento';
+                    document.getElementById('expired-logo').src = appSettings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo';
+                    document.getElementById('license-expired-message').textContent = appSettings.licenseExpiredMsg;
                     
-                    const modal = document.getElementById('license-modal');
-                    document.getElementById('license-modal-message').textContent = appSettings.licenseExpiredMsg;
-                    modal.classList.remove('hidden');
+                    showScreen('license-expired-screen');
                     
                     const adminLink = document.getElementById('admin-link');
                     if(adminLink) adminLink.style.display = 'none';
-                    document.getElementById('booking-form').style.display = 'none';
-                    
                     return;
                 }
 
-                // Se a licença estiver OK, continua o carregamento normal
-                applyTheme(appSettings.themeColor);
-                setupFormUI(appSettings);
-                setupEndedUI(appSettings);
-                
-                if (appSettings.isSchedulingEnded) {
-                    showScreen('ended-screen');
-                } else {
-                    showScreen('form-screen');
-                }
-
-                addEventListeners();
-                toggleInfoSupportButton();
+                loadFullApp();
 
             } catch (error) {
                 const loadingScreen = document.getElementById('loading-screen');
-                loadingScreen.innerHTML = `<p class="text-red-500 text-center">Não foi possível carregar as configurações do aplicativo.<br>Por favor, tente novamente mais tarde.</p>`;
+                loadingScreen.innerHTML = `<p class="text-red-500 text-center">Não foi possível carregar as configurações do aplicativo.<br>${error.message}</p>`;
+                showError(error);
             }
         }
 
-        // --- O RESTANTE DO SEU CÓDIGO JAVASCRIPT ORIGINAL, SEM NENHUMA ALTERAÇÃO ---
+        function loadFullApp() {
+            applyTheme(appSettings.themeColor);
+            setupFormUI(appSettings);
+            setupEndedUI(appSettings);
+            
+            if (appSettings.isSchedulingEnded) {
+                showScreen('ended-screen');
+            } else {
+                showScreen('form-screen');
+            }
+
+            addEventListeners();
+            toggleInfoSupportButton();
+        }
+
+        // --- O RESTANTE DO SEU CÓDIGO JAVASCRIPT ORIGINAL ---
         function applyTheme(color) { document.documentElement.style.setProperty('--theme-color', color); }
         function setupFormUI(settings) { document.getElementById('app-name').textContent = settings.appName || 'Sistema de Marcação'; document.getElementById('app-logo').src = settings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo'; document.getElementById('app-address').textContent = settings.appAddress || ''; document.getElementById('app-phone').textContent = settings.appPhone || ''; if (settings.appCoverUrl) { document.getElementById('cover-photo').style.backgroundImage = `url('${settings.appCoverUrl}')`; } const dateInput = document.getElementById('bookingDate'); const today = new Date(); today.setHours(0, 0, 0, 0); dateInput.min = today.toISOString().split('T')[0]; let finalMaxDate = null; if (settings.dateLimit && !isNaN(Number(settings.dateLimit))) { const maxDateFromLimit = new Date(today); maxDateFromLimit.setDate(today.getDate() + Number(settings.dateLimit)); finalMaxDate = maxDateFromLimit; } if (settings.schedulingEndDate && settings.schedulingEndDate.trim() !== "") { try { const parts = settings.schedulingEndDate.split('/'); if (parts.length === 3) { const endDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])); if (!isNaN(endDate.getTime())) { if (finalMaxDate === null || endDate < finalMaxDate) { finalMaxDate = endDate; } } } } catch (e) { console.error("Data de Encerramento inválida:", settings.schedulingEndDate); } } if (finalMaxDate) { dateInput.max = finalMaxDate.toISOString().split('T')[0]; } }
         function setupEndedUI(settings) { document.getElementById('ended-app-name').textContent = settings.appName || 'Sistema de Marcação'; document.getElementById('ended-logo').src = settings.appLogoUrl || 'https://placehold.co/100x100/cccccc/FFFFFF?text=Logo'; document.getElementById('ended-message').textContent = settings.schedulingEndedMsg || 'O período de marcações está encerrado.'; if (settings.appCoverUrl) { document.getElementById('ended-cover-photo').style.backgroundImage = `url('${settings.appCoverUrl}')`; } }
@@ -419,4 +415,4 @@
         function handleSupportClick() { const supportNumber = appSettings.supportNumber.replace(/\D/g, ''); let phone = supportNumber; if (phone.length <= 11 && !phone.startsWith('55')) { phone = '55' + phone; } const message = "Olá! Preciso de ajuda com o sistema de agendamento."; const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); }
     </script>
 </body>
-</ht
+</html>
