@@ -31,8 +31,11 @@
         // Esta função busca o HTML da API e substitui a página inteira.
         async function loadAppInterface() {
             try {
-                // O método GET é o padrão para fetch, então não precisamos especificá-lo.
-                const response = await fetch(API_URL);
+                // --- ALTERAÇÃO IMPORTANTE (CACHE BUSTING) ---
+                // Adicionamos um parâmetro de tempo à URL para torná-la única a cada carregamento.
+                // Isso força o navegador a ignorar qualquer cache antigo.
+                const response = await fetch(`${API_URL}?v=${new Date().getTime()}`);
+                
                 if (!response.ok) {
                     throw new Error('Não foi possível carregar a aplicação. Código: ' + response.status);
                 }
