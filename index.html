@@ -340,25 +340,22 @@
 
                 // --- LÓGICA DE LICENÇA CORRIGIDA ---
                 if (appSettings.isLicenseExpired) {
-                    // 1. Mostra a interface base (cabeçalho, etc.)
                     applyTheme(appSettings.themeColor || '#0B2447');
                     setupFormUI(appSettings);
                     showScreen('form-screen'); 
                     
-                    // 2. Mostra o modal de bloqueio por cima
                     const modal = document.getElementById('license-modal');
                     document.getElementById('license-modal-message').textContent = appSettings.licenseExpiredMsg;
                     modal.classList.remove('hidden');
                     
-                    // 3. Esconde links e botões sensíveis
                     const adminLink = document.getElementById('admin-link');
                     if(adminLink) adminLink.style.display = 'none';
-                    document.getElementById('booking-form').style.display = 'none'; // Esconde o formulário
+                    document.getElementById('booking-form').style.display = 'none';
                     
-                    return; // Interrompe a execução normal
+                    return;
                 }
 
-                // Se a licença estiver OK, continua o carregamento normal do app
+                // Se a licença estiver OK, continua o carregamento normal
                 applyTheme(appSettings.themeColor);
                 setupFormUI(appSettings);
                 setupEndedUI(appSettings);
@@ -422,4 +419,4 @@
         function handleSupportClick() { const supportNumber = appSettings.supportNumber.replace(/\D/g, ''); let phone = supportNumber; if (phone.length <= 11 && !phone.startsWith('55')) { phone = '55' + phone; } const message = "Olá! Preciso de ajuda com o sistema de agendamento."; const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`; window.open(whatsappUrl, '_blank'); }
     </script>
 </body>
-</html>
+</ht
