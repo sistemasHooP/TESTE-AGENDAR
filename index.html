@@ -509,7 +509,30 @@
         
         function populateSettingsForm() {
             const form = document.getElementById('settings-form');
-            const friendlyNames = { appName: 'Nome da App', appLogoUrl: 'URL do Logo', appCoverUrl: 'URL da Imagem de Capa', appAddress: 'Endereço', appPhone: 'Telefone', startTime: 'Horário de Início', endTime: 'Horário de Fim', interval: 'Intervalo (minutos)', dateLimit: 'Limite de Dias para Marcar', allowWeekend: 'Permitir Fim de Semana (SIM/NAO)', blockedWeekdays: 'Dias da Semana Bloqueados', themeColor: 'Cor Principal da App', adminUser: 'Utilizador Admin', adminPass: 'Palavra-passe Admin', schedulingEndDate: 'Data de Encerramento (dd/mm/aaaa)', schedulingEndedMsg: 'Mensagem de Encerramento', customerNotice: 'Aviso para Clientes', whatsappMessageTemplate: 'Template da Mensagem WhatsApp', supportNumber: 'Nº de Suporte WhatsApp (só dígitos)', allowPastBookings: 'Permitir Agendamento Retroativo' };
+            // --- ALTERAÇÃO AQUI: Adicionado 'minTimeToday' ---
+            const friendlyNames = { 
+                appName: 'Nome da App', 
+                appLogoUrl: 'URL do Logo', 
+                appCoverUrl: 'URL da Imagem de Capa', 
+                appAddress: 'Endereço', 
+                appPhone: 'Telefone', 
+                startTime: 'Horário de Início', 
+                endTime: 'Horário de Fim', 
+                interval: 'Intervalo (minutos)', 
+                dateLimit: 'Limite de Dias para Marcar', 
+                allowWeekend: 'Permitir Fim de Semana (SIM/NAO)', 
+                blockedWeekdays: 'Dias da Semana Bloqueados', 
+                themeColor: 'Cor Principal da App', 
+                adminUser: 'Utilizador Admin', 
+                adminPass: 'Palavra-passe Admin', 
+                minTimeToday: 'Horário Mínimo (Hoje)', // <-- NOVO CAMPO
+                schedulingEndDate: 'Data de Encerramento (dd/mm/aaaa)', 
+                schedulingEndedMsg: 'Mensagem de Encerramento', 
+                customerNotice: 'Aviso para Clientes', 
+                whatsappMessageTemplate: 'Template da Mensagem WhatsApp', 
+                supportNumber: 'Nº de Suporte WhatsApp (só dígitos)', 
+                allowPastBookings: 'Permitir Agendamento Retroativo' 
+            };
             let formHtml = '';
             for (const key in friendlyNames) {
                 if (Object.prototype.hasOwnProperty.call(appSettings, key) || appSettings[key] === undefined) {
@@ -522,13 +545,19 @@
                         if (key === 'whatsappMessageTemplate') { formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Use as variáveis <strong>[NOME]</strong>, <strong>[DATA]</strong> e <strong>[HORA]</strong> para personalizar a mensagem.</p>`; }
                     } else {
                         let inputType = 'text';
-                        if (key === 'startTime' || key === 'endTime') inputType = 'time';
+                        // --- ALTERAÇÃO AQUI: 'minTimeToday' é do tipo 'time' ---
+                        if (key === 'startTime' || key === 'endTime' || key === 'minTimeToday') inputType = 'time';
                         else if (key === 'interval' || key === 'dateLimit') inputType = 'number';
                         else if (key === 'themeColor') inputType = 'color';
                         else if (key === 'adminPass') inputType = 'password';
                         let extraAttributes = '';
                         if (key === 'schedulingEndDate') { extraAttributes = 'oninput="formatDate(this)" maxlength="10" placeholder="dd/mm/aaaa"'; }
                         formHtml += `<div class="mb-4"><label for="setting-${key}" class="block text-gray-600 mb-1">${friendlyNames[key]}</label><input type="${inputType}" id="setting-${key}" name="${key}" value="${fieldValue}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 theme-ring" ${extraAttributes}></div>`;
+                        
+                        // --- ALTERAÇÃO AQUI: Adiciona texto de ajuda ---
+                        if (key === 'minTimeToday') {
+                            formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Só mostrará horários a partir desta hora, no dia atual. Deixe em branco para desativar.</p>`;
+                        }
                         if (key === 'blockedWeekdays') { formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Use: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb, separados por vírgula.</p>`; }
                     }
                 }
