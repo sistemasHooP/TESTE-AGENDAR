@@ -421,7 +421,6 @@
         function renderWeeklyReport(data) { lastDashboardData = data; lastReportType = 'weekly'; const contentDiv = document.getElementById('dashboard-content'); let totalAppointments = Object.values(data).reduce((sum, day) => sum + day.length, 0); let reportHtml = `<div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">Marcações da Semana (${totalAppointments})</h3><button onclick="printReport()" class="theme-bg theme-hover-bg text-white px-4 py-2 rounded-lg text-sm"><i class="fas fa-print mr-2"></i>Imprimir</button></div>`; reportHtml += '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">'; const weekdays = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]; for (const dateKey in data) { const appointments = data[dateKey]; const dateObj = new Date(dateKey + 'T12:00:00'); const dayName = weekdays[dateObj.getDay()]; const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); reportHtml += `<div class="bg-white border rounded-lg shadow-sm p-4 flex flex-col"><h4 class="font-bold theme-text mb-3 text-center border-b pb-2">${dayName} - ${formattedDate}</h4>`; if (appointments.length > 0) { reportHtml += '<div class="space-y-3 flex-grow max-h-72 overflow-y-auto pr-2">'; appointments.forEach(app => { const appData = { ...app, date: dateKey }; const appDataString = JSON.stringify(appData).replace(/"/g, '&quot;'); reportHtml += `<div class="text-sm p-2 bg-gray-50 rounded-md border"><p class="font-semibold">${app.time} - ${app.name}</p><p class="text-xs text-gray-600">${app.phone}</p><div class="mt-2 text-right space-x-1"><button onclick='sendWhatsAppMessage(${appDataString})' title="Enviar WhatsApp" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded text-xs"><i class="fab fa-whatsapp"></i></button><button onclick='openEditModal(${appDataString})' title="Editar" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-2 rounded text-xs"><i class="fas fa-edit"></i></button><button onclick="confirmDeleteAppointment('${app.id}')" title="Excluir" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded text-xs"><i class="fas fa-trash-alt"></i></button></div></div>`; }); reportHtml += '</div>'; } else { reportHtml += '<div class="flex-grow flex items-center justify-center"><p class="text-sm text-gray-400 p-4">Nenhum agendamento.</p></div>'; } reportHtml += '</div>'; } reportHtml += '</div>'; contentDiv.innerHTML = reportHtml; }
         function renderAdminReport(data) { lastDashboardData = data; lastReportType = 'daily'; const contentDiv = document.getElementById('dashboard-content'); if (data.error) { contentDiv.innerHTML = `<p class="text-red-500">${data.error}</p>`; return; } let reportHtml = `<div class="flex justify-between items-center mb-2 flex-wrap gap-2"><h3 class="text-lg font-semibold">Total de Marcações: ${data.count}</h3><button onclick="printReport()" class="theme-bg theme-hover-bg text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-2"></i>Imprimir</button></div>`; if (data.count > 0) { reportHtml += `<div class="mt-2 border rounded-lg max-h-[60vh] overflow-y-auto relative"><div class="overflow-x-auto"><table class="min-w-full bg-white"><thead class="bg-gray-100 sticky top-0 z-10"><tr><th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-600">Horário</th><th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-600">Nome</th><th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-600">Telefone</th><th class="py-2 px-4 border-b text-left text-sm font-semibold text-gray-600">Ações</th></tr></thead><tbody>`; data.appointments.forEach(app => { const appData = JSON.stringify(app).replace(/"/g, '&quot;'); reportHtml += `<tr><td class="py-2 px-4 border-b">${app.time}</td><td class="py-2 px-4 border-b">${app.name}</td><td class="py-2 px-4 border-b">${app.phone}</td><td class="py-2 px-4 border-b"><div class="flex items-center gap-2"><button onclick='sendWhatsAppMessage(${appData})' title="Enviar WhatsApp" class="w-8 h-8 flex items-center justify-center rounded bg-green-500 hover:bg-green-600 text-white transition-all duration-200"><i class="fab fa-whatsapp"></i></button><button onclick='openEditModal(${appData})' title="Editar" class="w-8 h-8 flex items-center justify-center rounded bg-blue-500 hover:bg-blue-600 text-white transition-all duration-200"><i class="fas fa-edit"></i></button><button onclick="confirmDeleteAppointment('${app.id}')" title="Excluir" class="w-8 h-8 flex items-center justify-center rounded bg-red-500 hover:bg-red-600 text-white transition-all duration-200"><i class="fas fa-trash-alt"></i></button></div></td></tr>`; }); reportHtml += `</tbody></table></div></div>`; } else { reportHtml += '<div class="text-center bg-gray-50 p-6 mt-4 rounded-lg"><p class="text-gray-500">Nenhuma marcação para esta data.</p></div>'; } contentDiv.innerHTML = reportHtml; }
         
-        // --- A FUNÇÃO ABAIXO FOI ATUALIZADA PARA CORRIGIR A IMPRESSÃO ---
         function printReport() {
             if (!lastDashboardData) {
                 showCustomAlert("Não há dados de relatório para imprimir.");
@@ -507,9 +506,9 @@
         function selectEditorTime(element, time) { document.querySelectorAll('.editor-time-slot-btn').forEach(btn => { btn.classList.remove('theme-bg', 'text-white'); btn.classList.add('bg-gray-100'); }); element.classList.add('theme-bg', 'text-white'); element.classList.remove('bg-gray-100'); editAppointmentData.selectedTime = time; }
         function renderChart(chartData) { if (chartData.error) { console.error(chartData.error); return; } const ctx = document.getElementById('appointmentsChart').getContext('2d'); if (appointmentsChart) appointmentsChart.destroy(); appointmentsChart = new Chart(ctx, { type: 'bar', data: { labels: chartData.labels, datasets: [{ label: 'Nº de Marcações', data: chartData.data, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--theme-color') + 'B3', borderColor: getComputedStyle(document.documentElement).getPropertyValue('--theme-color'), borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } }); }
         
+        // --- FUNÇÃO ATUALIZADA ---
         function populateSettingsForm() {
             const form = document.getElementById('settings-form');
-            // --- ALTERAÇÃO AQUI: Adicionado 'minTimeToday' ---
             const friendlyNames = { 
                 appName: 'Nome da App', 
                 appLogoUrl: 'URL do Logo', 
@@ -521,11 +520,12 @@
                 interval: 'Intervalo (minutos)', 
                 dateLimit: 'Limite de Dias para Marcar', 
                 allowWeekend: 'Permitir Fim de Semana (SIM/NAO)', 
-                blockedWeekdays: 'Dias da Semana Bloqueados', 
+                blockedWeekdays: 'Dias da Semana Bloqueados (Ex: 0,6)', 
                 themeColor: 'Cor Principal da App', 
                 adminUser: 'Utilizador Admin', 
                 adminPass: 'Palavra-passe Admin', 
-                minTimeToday: 'Horário Mínimo (Hoje)', // <-- NOVO CAMPO
+                dynamicMinTime: 'Horário de Corte Dinâmico', // <-- NOVO
+                dynamicMinTimeDays: 'Aplicar Corte nos Dias', // <-- NOVO
                 schedulingEndDate: 'Data de Encerramento (dd/mm/aaaa)', 
                 schedulingEndedMsg: 'Mensagem de Encerramento', 
                 customerNotice: 'Aviso para Clientes', 
@@ -533,37 +533,64 @@
                 supportNumber: 'Nº de Suporte WhatsApp (só dígitos)', 
                 allowPastBookings: 'Permitir Agendamento Retroativo' 
             };
+
             let formHtml = '';
+            const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+            
             for (const key in friendlyNames) {
                 if (Object.prototype.hasOwnProperty.call(appSettings, key) || appSettings[key] === undefined) {
                     const fieldValue = appSettings[key] || '';
+                    
                     if (key === 'allowPastBookings') {
                         const isChecked = fieldValue === 'SIM';
                         formHtml += `<div class="mb-6"><label class="block text-gray-600 mb-2">${friendlyNames[key]}</label><div class="flex items-center"><input type="hidden" name="allowPastBookings" id="setting-allowPastBookings-value" value="${fieldValue || 'NAO'}"><button type="button" id="setting-allowPastBookings-switch" class="${isChecked ? 'theme-bg' : 'bg-gray-200'} relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 theme-ring"><span class="${isChecked ? 'translate-x-6' : 'translate-x-1'} inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out"></span></button><span id="setting-allowPastBookings-label" class="ml-3 text-sm font-medium ${isChecked ? 'theme-text' : 'text-gray-500'}">${isChecked ? 'Ativado' : 'Desativado'}</span></div><p class="text-xs text-gray-500 mt-1">Se ativado, permite que agendamentos sejam feitos em datas passadas.</p></div>`;
+                    
+                    } else if (key === 'dynamicMinTimeDays') {
+                        // --- NOVO BLOCO PARA OS CHECKBOXES ---
+                        const savedDays = (appSettings.dynamicMinTimeDays || "").split(',').map(s => s.trim()).filter(Boolean).map(Number);
+                        formHtml += `<div class="mb-4">
+                            <label class="block text-gray-600 mb-1">${friendlyNames[key]}</label>
+                            <div class="grid grid-cols-4 sm:grid-cols-7 gap-2 mt-2">`;
+                        
+                        weekdays.forEach((day, index) => {
+                            const isChecked = savedDays.includes(index);
+                            formHtml += `<label for="day-${index}" class="flex items-center space-x-2 p-2 border rounded-lg ${isChecked ? 'theme-bg text-white' : 'bg-gray-50'} cursor-pointer">
+                                <input type="checkbox" id="day-${index}" value="${index}" onchange="updateDynamicDays()" class="dynamic-day-check h-4 w-4 theme-ring rounded" ${isChecked ? 'checked' : ''}>
+                                <span class="text-sm font-medium">${day}</span>
+                            </label>`;
+                        });
+                        
+                        formHtml += `</div>
+                            <input type="hidden" id="setting-dynamicMinTimeDays" name="dynamicMinTimeDays" value="${appSettings.dynamicMinTimeDays || ''}">
+                            <p class="text-xs text-gray-500 mt-1">Marque os dias em que o "Horário de Corte" deve ser aplicado.</p>
+                        </div>`;
+                        // --- FIM DO NOVO BLOCO ---
+
                     } else if (key === 'whatsappMessageTemplate' || key === 'schedulingEndedMsg' || key === 'customerNotice') {
                         formHtml += `<div class="mb-4"><label for="setting-${key}" class="block text-gray-600 mb-1">${friendlyNames[key]}</label><textarea id="setting-${key}" name="${key}" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 theme-ring">${fieldValue}</textarea></div>`;
                         if (key === 'whatsappMessageTemplate') { formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Use as variáveis <strong>[NOME]</strong>, <strong>[DATA]</strong> e <strong>[HORA]</strong> para personalizar a mensagem.</p>`; }
+                    
                     } else {
                         let inputType = 'text';
-                        // --- ALTERAÇÃO AQUI: 'minTimeToday' é do tipo 'time' ---
-                        if (key === 'startTime' || key === 'endTime' || key === 'minTimeToday') inputType = 'time';
+                        if (key === 'startTime' || key === 'endTime' || key === 'dynamicMinTime') inputType = 'time';
                         else if (key === 'interval' || key === 'dateLimit') inputType = 'number';
                         else if (key === 'themeColor') inputType = 'color';
                         else if (key === 'adminPass') inputType = 'password';
+                        
                         let extraAttributes = '';
                         if (key === 'schedulingEndDate') { extraAttributes = 'oninput="formatDate(this)" maxlength="10" placeholder="dd/mm/aaaa"'; }
+                        
                         formHtml += `<div class="mb-4"><label for="setting-${key}" class="block text-gray-600 mb-1">${friendlyNames[key]}</label><input type="${inputType}" id="setting-${key}" name="${key}" value="${fieldValue}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 theme-ring" ${extraAttributes}></div>`;
                         
-                        // --- ALTERAÇÃO AQUI: Adiciona texto de ajuda ---
-                        if (key === 'minTimeToday') {
-                            formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Só mostrará horários a partir desta hora, no dia atual. Deixe em branco para desativar.</p>`;
-                        }
                         if (key === 'blockedWeekdays') { formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Use: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb, separados por vírgula.</p>`; }
+                        if (key === 'dynamicMinTime') { formHtml += `<p class="text-xs text-gray-500 -mt-2 mb-4">Horário de corte. Ex: "14:00". Só mostrará horários a partir desta hora, nos dias selecionados.</p>`; }
                     }
                 }
             }
             formHtml += `<button type="submit" id="save-settings-btn" class="w-full theme-bg theme-hover-bg text-white font-bold py-3 px-4 rounded-lg">Guardar Alterações</button>`;
             form.innerHTML = formHtml;
+
+            // Adiciona o listener para o switch 'allowPastBookings'
             const switchButton = document.getElementById('setting-allowPastBookings-switch');
             if (switchButton) {
                 const hiddenInput = document.getElementById('setting-allowPastBookings-value');
@@ -627,6 +654,37 @@
             addBlockForm.addEventListener('submit', async (e) => { e.preventDefault(); const date = document.getElementById('block-date').value; const time = document.getElementById('block-time').value; if (!date) { showCustomAlert("Por favor, selecione uma data para o bloqueio."); return; } const btn = e.target.querySelector('button[type="submit"]'); const originalText = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<div class="loader mx-auto" style="width: 20px; height: 20px; border-width: 2px;"></div>'; try { const response = await callApi('addBlock', { blockData: { date, time }}); if (response.success) { addBlockForm.reset(); loadBlocksList(); } else { showCustomAlert(response.message || "Erro ao adicionar bloqueio."); } } finally { btn.disabled = false; btn.innerHTML = originalText; } }); 
         }
         
+        // --- NOVA FUNÇÃO DE AJUDA ---
+        function updateDynamicDays() {
+            const hiddenInput = document.getElementById('setting-dynamicMinTimeDays');
+            const checkboxes = document.querySelectorAll('.dynamic-day-check:checked');
+            const selectedDays = Array.from(checkboxes).map(cb => cb.value);
+            hiddenInput.value = selectedDays.join(',');
+
+            // Atualiza a aparência dos labels
+            document.querySelectorAll('.dynamic-day-check').forEach(cb => {
+                const label = cb.closest('label');
+                if (cb.checked) {
+                    label.classList.add('theme-bg', 'text-white');
+                    label.classList.remove('bg-gray-50');
+                } else {
+                    label.classList.remove('theme-bg', 'text-white');
+                    label.classList.add('bg-gray-50');
+                }
+            });
+        }
+        
+        // --- NOVA FUNÇÃO DE AJUDA ---
+        function formatDate(input) {
+            let value = input.value.replace(/\D/g, '');
+            if (value.length > 4) {
+                value = `${value.substring(0, 2)}/${value.substring(2, 4)}/${value.substring(4, 8)}`;
+            } else if (value.length > 2) {
+                value = `${value.substring(0, 2)}/${value.substring(2, 4)}`;
+            }
+            input.value = value;
+        }
+
         function showInfoModal() { const noticeContent = document.getElementById('info-modal-content'); const supportSection = document.getElementById('info-modal-support-section'); let contentHtml = ''; const hasNotice = appSettings.customerNotice && String(appSettings.customerNotice).trim() !== ""; const hasSupport = appSettings.supportNumber && String(appSettings.supportNumber).trim() !== ""; if (hasNotice) { contentHtml += `<h3 class="text-xl leading-6 font-bold text-gray-800">Aviso Importante</h3><div class="text-base text-gray-600"><p>${appSettings.customerNotice.replace(/\n/g, '<br>')}</p></div>`; } if (!hasNotice && !hasSupport) { showCustomAlert('Nenhuma informação ou contato de suporte disponível no momento.'); return; } if (!hasNotice && hasSupport) { contentHtml += `<h3 class="text-xl leading-6 font-bold text-gray-800">Suporte</h3>`; } noticeContent.innerHTML = contentHtml; if (hasSupport) { supportSection.classList.remove('hidden'); } else { supportSection.classList.add('hidden'); } document.getElementById('info-modal').classList.remove('hidden'); }
         function hideInfoModal() { document.getElementById('info-modal').classList.add('hidden'); }
         function toggleInfoSupportButton() { const infoButton = document.getElementById('info-support-button'); const hasNotice = appSettings.customerNotice && String(appSettings.customerNotice).trim() !== ""; const hasSupport = appSettings.supportNumber && String(appSettings.supportNumber).trim() !== ""; if (hasNotice || hasSupport) { infoButton.classList.remove('hidden'); } else { infoButton.classList.add('hidden'); } }
